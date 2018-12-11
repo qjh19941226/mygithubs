@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx 
+        http://www.springframework.org/schema/tx/spring-tx.xsd ">
+        
+       <!-- 引入资源文件 -->
+       <context:property-placeholder location="classpath:jdbc.properties"/> 
+       
+       <!-- 配置数据源：dbcp,c3p0,druip等 -->
+	    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+	        <property name="driverClassName" value="${jdbc.driverClassName}"/>
+	        <property name="url" value="${jdbc.url}"/>
+	        <property name="username" value="${jdbc.username}"/>
+	        <property name="password" value="${jdbc.password}"/>
+	    </bean>
+
+       <!-- sessionFactory对象由spring来创建 -->
+	    <bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+	        <property name="dataSource" ref="dataSource"></property>
+	        <!-- 通用属性配置 -->
+	        <property name="hibernateProperties">
+	            <props>
+	                <prop key="hibernate.dialect">org.hibernate.dialect.OracleDialect</prop>
+	                <prop key="hibernate.show_sql">true</prop>
+	                <prop key="hibernate.format_sql">true</prop>
+	            </props>
+	        </property>
+	        <!--  hibernate映射文件  -->
+			<property name="packagesToScan">
+				<list>
+					<value>com/qjh/wx/po*</value>
+				</list>
+			</property>
+	    </bean>
+	    <!-- 配置声明式事务 -->
+	    <!-- 配置事务管理器 -->
+	    <bean id="txManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+	        <property name="sessionFactory" ref="sessionFactory"></property>
+	    </bean>
+	    <!-- 配置事务通知 -->
+	    <tx:advice id="txAdvice" transaction-manager="txManager">
+		    <tx:attributes>
+		        <tx:method name="save*" propagation="REQUIRED"/>
+		        <tx:method name="update*" propagation="REQUIRED"/>
+		        <tx:method name="query*" read-only="true"/>
+		        <tx:method name="queryPage*" read-only="true"/>
+		        <tx:method name="*" propagation="REQUIRED"/>
+		    </tx:attributes>
+	  	</tx:advice>
+	  	<tx:annotation-driven transaction-manager="txManager"/>
+	    <!-- 配置事务aop -->
+	    <aop:config>
+	        <aop:pointcut expression="execution(* com.qjh.wx.service.*.*(..))" id="pointcut"/>
+	        <aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut"/>
+	    </aop:config>
+	    <!-- 自动扫描  指定包下及其子包下的所有类中注解，并根据注解完成指定工作 -->
+	    <context:component-scan base-package="com.qjh.wx.*"></context:component-scan>
+</beans>
